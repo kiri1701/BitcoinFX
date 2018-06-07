@@ -16,8 +16,8 @@ product_code = "FX_BTC_JPY"
 # secret = API Secret
 key = ARGV[0]
 secret = ARGV[1]
-lower = 0.01
-upper = 0.005
+lower = 0.006
+upper = 0.004
 size = 0.02
 w = 5
 
@@ -42,7 +42,6 @@ end
 # GAを計算してパラメータを準最適化する
 ga = GA.new(value,4,7,3,w)
 params = ga.genetic_optimize
-p params
 # MACDを計算するやつ
 macd = MACD.new(value,w,params[0..2])
 # Stochasticを計算するやつ
@@ -85,8 +84,8 @@ begin
         macd_sig = macd.update_signal(ltp)
         stoc_sig = stoc.update_signal(ltp)
 
-        # puts "orders: #{orders}"
-        # puts "positions: #{positions}"
+        puts "orders: #{orders}"
+        puts "positions: #{positions}"
         
         puts "status: #{status}"
         puts "macd: #{macd_sig}"
@@ -98,29 +97,33 @@ begin
         when 1 then
             #得している
             if (positions[0]["price"].to_f / ltp - 1.0 > upper) && (macd_sig == -1)
-                    bit_api.cancel_all_childorders(product_code) if orders != []
-                    bit_api.send_order size, ltp, "SELL", "LIMIT"
-                    count += 1
-                    puts "action: SELL"
-                    puts "pnl: #{positions[0]["pnl"].to_s}"
+                puts "positions: #{positions}"
+                bit_api.cancel_all_childorders(product_code) if orders != []
+                bit_api.send_order size, ltp, "SELL", "LIMIT"
+                count += 1
+                puts "action: SELL"
+                puts "pnl: #{positions[0]["pnl"].to_s}"
             # 損している
             elsif (1.0 - positions[0]["price"].to_f/ltp > lower) && (macd_sig == -1 || stoc_sig == -1)
-                    bit_api.cancel_all_childorders(product_code) if orders != []
-                    bit_api.send_order size, ltp, "SELL", "LIMIT"
-                    count -= 1
-                    puts "action: SELL"
-                    puts "pnl: #{positions[0]["pnl"].to_s}"
+                puts "positions: #{positions}"
+                bit_api.cancel_all_childorders(product_code) if orders != []
+                bit_api.send_order size, ltp, "SELL", "LIMIT"
+                count -= 1
+                puts "action: SELL"
+                puts "pnl: #{positions[0]["pnl"].to_s}"
             end
         # ノーポジション
         when 0 then
             #シグナルからエントリーのタイミングをみる
             # 両方1なら買いエントリー, -1なら売りエントリー
             if (macd_sig == 1 && stoc_sig == 1) then
+                puts "entry"
                 bit_api.cancel_all_childorders(product_code) if orders != []
                 bit_api.send_order size, ltp, "BUY", "LIMIT"
                 puts "action: BUY"
                 puts "price: #{ltp.to_s}"
             elsif (macd_sig == -1 && stoc_sig == -1) then
+                puts "entry"
                 bit_api.cancel_all_childorders(product_code) if orders != []
                 bit_api.send_order size, ltp, "SELL", "LIMIT"
                 puts "action: SELL"
@@ -129,19 +132,21 @@ begin
         # 売りポジション
         when -1 then
             #得している
-            if (positions[0]["price"].to_f / ltp - 1.0 > upper)  && (macd_sig == 1) then
-                    bit_api.cancel_all_childorders(product_code) if orders != []
-                    bit_api.send_order size, ltp, "BUY", "LIMIT"
-                    count += 1
-                    puts "action: BUY"
-                    puts "pnl: #{positions[0]["pnl"].to_s}"
+            if (positions[0]["price"].to_f / ltp - 1.0 > upper)  && (macd_sig == 1)
+                puts "positions: #{positions}"
+                bit_api.cancel_all_childorders(product_code) if orders != []
+                bit_api.send_order size, ltp, "BUY", "LIMIT"
+                count += 1
+                puts "action: BUY"
+                puts "pnl: #{positions[0]["pnl"].to_s}"
             # 損している
-            elsif (1.0 - positions[0]["price"].to_f/ltp > lower) && (macd_sig == 1 || stoc_sig == 1) then
-                    bit_api.cancel_all_childorders(product_code) if orders != []
-                    bit_api.send_order size, ltp, "BUY", "LIMIT"
-                    count -= 1
-                    puts "action: BUY"
-                    puts "pnl: #{positions[0]["pnl"].to_s}"
+            elsif (1.0 - positions[0]["price"].to_f/ltp > lower) && (macd_sig == 1 || stoc_sig == 1)
+                puts "positions: #{positions}"
+                bit_api.cancel_all_childorders(product_code) if orders != []
+                bit_api.send_order size, ltp, "BUY", "LIMIT"
+                count -= 1
+                puts "action: BUY"
+                puts "pnl: #{positions[0]["pnl"].to_s}"
             end
         end
         
